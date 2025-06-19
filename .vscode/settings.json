@@ -1,0 +1,9 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.validate": ["javascript", "jsx", "typescript", "tsx"],
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "eslint.useFlatConfig": true
+}
