@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" });
 
 const imageUpload = multer({
   dest: "uploads/",
@@ -32,6 +32,18 @@ const documentUpload = multer({
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF and DOCX documents are allowed"), false);
+    }
+  },
+});
+
+const soundUpload = multer({
+  dest: "uploads/",
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ["audio/wav", "audio/x-wav", "audio/mpeg"];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -92,6 +104,35 @@ app.post(
         },
       };
       const result = await model.generateContent([prompt, documentPart]);
+      const resp = result.response;
+      res.status(200).json({ output: resp.text() });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error });
+    } finally {
+      fs.unlinkSync(req.file.path);
+    }
+  }
+);
+
+app.post(
+  "/generate-from-audio",
+  soundUpload.single("audio"),
+  async (req, res) => {
+    const file = req.file.path;
+    const buffer = fs.readFileSync(file);
+    const base64 = buffer.toString("base64");
+    const mimeType = req.file.mimetype;
+    const prompt = req.body.prompt || "Analyse the audio";
+
+    try {
+      const audioPart = {
+        inlineData: {
+          data: base64,
+          mimeType,
+        },
+      };
+      const result = await model.generateContent([prompt, audioPart]);
       const resp = result.response;
       res.status(200).json({ output: resp.text() });
     } catch (error) {
